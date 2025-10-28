@@ -84,23 +84,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         const result = await resp.json();
         if (resp.ok) {
-          // Atualiza o cartão e a lista lateral
-          displayParticipants(activityName, result.participants);
-          const selected = activitySelect.value;
-          if (selected === activityName) {
-            // rebuild side list
-            participantsList.innerHTML = '';
-            if (result.participants && result.participants.length) {
-              result.participants.forEach(p => {
-                participantsList.appendChild(createParticipantLi(activityName, p));
-              });
-            } else {
-              const empty = document.createElement('li');
-              empty.className = 'empty-participants';
-              empty.textContent = 'Nenhum participante ainda.';
-              participantsList.appendChild(empty);
-            }
-          }
+          // Atualiza toda a interface para refletir mudanças
+          fetchActivities();
         } else {
           alert(result.detail || 'Erro ao remover participante');
         }
@@ -194,22 +179,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.className = "success";
         signupForm.reset();
         // Update participants list dentro do cartão usando os dados retornados
-        displayParticipants(result.activity, result.participants);
-        // também atualiza a lista lateral se já houver atividade selecionada
-        const selected = activitySelect.value;
-        if (selected === result.activity) {
-          participantsList.innerHTML = '';
-          if (result.participants && result.participants.length) {
-            result.participants.forEach(p => {
-              participantsList.appendChild(createParticipantLi(result.activity, p));
-            });
-          } else {
-            const li = document.createElement('li');
-            li.className = 'empty-participants';
-            li.textContent = 'Nenhum participante ainda.';
-            participantsList.appendChild(li);
-          }
-        }
+        // Atualiza toda a interface para refletir mudanças
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
