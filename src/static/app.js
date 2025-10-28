@@ -53,9 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
           participantsUl.appendChild(li);
         } else {
           details.participants.forEach(p => {
-            const li = document.createElement('li');
-            li.textContent = p;
-            participantsUl.appendChild(li);
+            participantsUl.appendChild(createParticipantLi(name, p));
           });
         }
       });
@@ -63,6 +61,58 @@ document.addEventListener("DOMContentLoaded", () => {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
       console.error("Error fetching activities:", error);
     }
+  }
+
+  // Helper to create a participant <li> with delete button
+  function createParticipantLi(activityName, email) {
+    const li = document.createElement('li');
+    li.className = 'participant-item';
+
+    const span = document.createElement('span');
+    span.textContent = email;
+
+    const btn = document.createElement('button');
+    btn.className = 'delete-btn';
+    btn.setAttribute('aria-label', `Remove ${email} from ${activityName}`);
+    btn.textContent = '✕';
+
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Remover ${email} de ${activityName}?`)) return;
+      try {
+        const resp = await fetch(`/activities/${encodeURIComponent(activityName)}/unregister?email=${encodeURIComponent(email)}`, {
+          method: 'DELETE'
+        });
+        const result = await resp.json();
+        if (resp.ok) {
+          // Atualiza o cartão e a lista lateral
+          displayParticipants(activityName, result.participants);
+          const selected = activitySelect.value;
+          if (selected === activityName) {
+            // rebuild side list
+            participantsList.innerHTML = '';
+            if (result.participants && result.participants.length) {
+              result.participants.forEach(p => {
+                participantsList.appendChild(createParticipantLi(activityName, p));
+              });
+            } else {
+              const empty = document.createElement('li');
+              empty.className = 'empty-participants';
+              empty.textContent = 'Nenhum participante ainda.';
+              participantsList.appendChild(empty);
+            }
+          }
+        } else {
+          alert(result.detail || 'Erro ao remover participante');
+        }
+      } catch (err) {
+        console.error('Erro ao chamar unregister:', err);
+        alert('Não foi possível remover participante. Tente novamente.');
+      }
+    });
+
+    li.appendChild(span);
+    li.appendChild(btn);
+    return li;
   }
 
   // Função para exibir participantes dentro do cartão correspondente
@@ -84,9 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ul.appendChild(li);
     } else {
       participants.forEach(p => {
-        const li = document.createElement('li');
-        li.textContent = p;
-        ul.appendChild(li);
+        ul.appendChild(createParticipantLi(activityId, p));
       });
     }
   }
@@ -105,10 +153,17 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const data = await response.json(); // espera { description, schedule, participants, ... }
       // Atualiza a lista lateral (existente)
-      participantsList.innerHTML =
-        (data.participants && data.participants.length)
-          ? data.participants.map(p => `<li>${p}</li>`).join("")
-          : '<li class="empty-participants">Nenhum participante ainda.</li>';
+      participantsList.innerHTML = '';
+      if (data.participants && data.participants.length) {
+        data.participants.forEach(p => {
+          participantsList.appendChild(createParticipantLi(activityId, p));
+        });
+      } else {
+        const li = document.createElement('li');
+        li.className = 'empty-participants';
+        li.textContent = 'Nenhum participante ainda.';
+        participantsList.appendChild(li);
+      }
 
       // Atualiza também o cartão correspondente
       displayParticipants(activityId, data.participants);
@@ -143,9 +198,17 @@ document.addEventListener("DOMContentLoaded", () => {
         // também atualiza a lista lateral se já houver atividade selecionada
         const selected = activitySelect.value;
         if (selected === result.activity) {
-          participantsList.innerHTML = result.participants.length
-            ? result.participants.map(p => `<li>${p}</li>`).join("")
-            : '<li class="empty-participants">Nenhum participante ainda.</li>';
+          participantsList.innerHTML = '';
+          if (result.participants && result.participants.length) {
+            result.participants.forEach(p => {
+              participantsList.appendChild(createParticipantLi(result.activity, p));
+            });
+          } else {
+            const li = document.createElement('li');
+            li.className = 'empty-participants';
+            li.textContent = 'Nenhum participante ainda.';
+            participantsList.appendChild(li);
+          }
         }
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
